@@ -1,25 +1,24 @@
 version 1.0
 
-workflow filterR2_VCFs {
+workflow norm_VCFs {
 
 	meta {
 	author: "Phuwanat Sakornsakolpat"
 		email: "phuwanat.sak@mahidol.edu"
-		description: "Filter VCF by R2 and sample"
+		description: "Split multi-allelic records"
 	}
 
 	 input {
 		File vcf_file
-		File sample_file
 	}
 
 	call run_filtering { 
-			input: vcf = vcf_file, sample=sample_file
+			input: vcf = vcf_file
 	}
 
 	output {
-		File filtered_vcf = run_filtering.out_file
-		File filtered_tbi = run_filtering.out_file_tbi
+		File normed_vcf = run_filtering.out_file
+		File normed_tbi = run_filtering.out_file_tbi
 	}
 
 }
@@ -27,23 +26,20 @@ workflow filterR2_VCFs {
 task run_filtering {
 	input {
 		File vcf
-		File sample
 		Int memSizeGB = 8
 		Int threadCount = 2
 		Int diskSizeGB = 8*round(size(vcf, "GB")) + 20
 	String out_name = basename(vcf, ".vcf.gz")
-	String r2 = "0.7"
 	}
 	
 	command <<<
-	tabix -p vcf ~{vcf}
-	bcftools view -S ~{sample} -i 'R2>=~{r2}' -Oz -o ~{out_name}.filtered.vcf.gz ~{vcf}
-	tabix -p vcf ~{out_name}.filtered.vcf.gz
+	bcftools norm -m -both -Oz -o ~{out_name}.normed.vcf.gz ~{vcf}
+	tabix -p vcf ~{out_name}.normed.vcf.gz
 	>>>
 
 	output {
-		File out_file = select_first(glob("*.filtered.vcf.gz"))
-		File out_file_tbi = select_first(glob("*.filtered.vcf.gz.tbi"))
+		File out_file = select_first(glob("*.normed.vcf.gz"))
+		File out_file_tbi = select_first(glob("*.normed.vcf.gz.tbi"))
 	}
 
 	runtime {
